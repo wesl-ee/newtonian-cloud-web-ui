@@ -73,6 +73,15 @@ export async function fetchJson<T>(path: string): Promise<T> {
   return (await resp.json()) as T;
 }
 
+async function fetchJsonAuth<T>(path: string, token: string): Promise<T> {
+  const resp = await fetch(`${API_URL}${path}`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error(await decodeError(resp));
+  return (await resp.json()) as T;
+}
+
 export const api = {
   uploadStart(token: string, filename: string, mimeType: string, size: number, chunkSize: number) {
     return pbPost<{ filename: string; mimeType: string; size: number; chunkSize: number }, { uploadId: string; chunkSize: number }>(
@@ -169,6 +178,21 @@ export const api = {
   },
   fileDelete(token: string, cid: string) {
     return pbPost("/files/delete", files.FileRequest, { fileCid: cid }, files.DeleteFileReply, token);
+  },
+  filesList(token: string, page = 1, pageSize = 50) {
+    return fetchJsonAuth<{
+      items: Array<{
+        file_cid: string;
+        filename: string;
+        mime_type: string;
+        size_bytes: number;
+        status: string;
+        height: number;
+        created_at: string;
+      }>;
+      next_page_token: string;
+      final_page_token: string;
+    }>(`/files/list?page=${page}&page_size=${pageSize}`, token);
   },
   userSpace(token: string) {
     return pbPost<

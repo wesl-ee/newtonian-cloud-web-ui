@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatBytes } from "@/lib/fmt";
 import { useAuth } from "@/providers/auth-provider";
-import { loadKnownCids, removeKnownCid } from "@/lib/auth-storage";
 
 type FileMeta = {
   file_cid: string;
@@ -17,25 +16,27 @@ type FileMeta = {
   height: number;
 };
 
+type PagerToken = number | "ellipsis";
+
 export default function FilesPage() {
   const auth = useAuth();
   const router = useRouter();
   const [space, setSpace] = useState<{ used_bytes: number; quota_bytes: number } | null>(null);
-  const [knownCids, setKnownCids] = useState<string[]>([]);
   const [rows, setRows] = useState<FileMeta[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Record<string, true>>({});
   const [selectMode, setSelectMode] = useState(false);
+  const [page, setPage] = useState(1);
+  const [finalPage, setFinalPage] = useState(1);
+  const [nextPageToken, setNextPageToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
 
   const token = auth.session?.token || "";
-  const userId = auth.session?.userId || "";
   const selectedCount = useMemo(() => Object.keys(selected).length, [selected]);
 
   useEffect(() => {
     if (!auth.ready || !auth.session) return;
-    setKnownCids(loadKnownCids(auth.session.userId));
     void api
       .userSpace(auth.session.token)
       .then(setSpace)
@@ -47,29 +48,25 @@ export default function FilesPage() {
   }, [auth.ready, auth.session, router]);
 
   useEffect(() => {
-    if (!token || knownCids.length === 0) {
-      setRows([]);
-      return;
-    }
+    if (!token) return;
     let active = true;
     setLoading(true);
-    void Promise.all(
-      knownCids.map(async (cid) => {
-        try {
-          return await api.fileGet(token, cid);
-        } catch {
-          return null;
-        }
-      }),
-    ).then((list) => {
+    void api.filesList(token, page, 50).then((resp) => {
       if (!active) return;
-      setRows(list.filter((x): x is FileMeta => !!x));
+      setRows(resp.items);
+      setNextPageToken(resp.next_page_token);
+      setFinalPage(Math.max(1, Number(resp.final_page_token || "1")));
+      setLoading(false);
+    }).catch((e: unknown) => {
+      if (!active) return;
+      setStatus(e instanceof Error ? e.message : "list failed");
+      setRows([]);
       setLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [knownCids, token]);
+  }, [page, token]);
 
   useEffect(() => {
     if (!token || rows.length === 0) {
@@ -112,6 +109,17 @@ export default function FilesPage() {
     if (!space) return "";
     return `${formatBytes(space.used_bytes)} / ${formatBytes(space.quota_bytes)}`;
   }, [space]);
+  const pagerTokens = useMemo<PagerToken[]>(() => {
+    if (finalPage <= 7) return Array.from({ length: finalPage }, (_, i) => i + 1);
+    const out: PagerToken[] = [1];
+    const start = Math.max(2, page - 1);
+    const end = Math.min(finalPage - 1, page + 1);
+    if (start > 2) out.push("ellipsis");
+    for (let n = start; n <= end; n += 1) out.push(n);
+    if (end < finalPage - 1) out.push("ellipsis");
+    out.push(finalPage);
+    return out;
+  }, [finalPage, page]);
 
   function toggleSelected(cid: string) {
     setSelected((curr) => {
@@ -125,17 +133,14 @@ export default function FilesPage() {
   }
 
   async function onDeleteMany(cids: string[]) {
-    if (!token || !userId || cids.length === 0) return;
+    if (!token || cids.length === 0) return;
     const results = await Promise.allSettled(cids.map((cid) => api.fileDelete(token, cid)));
     const deleted = cids.filter((_, i) => results[i].status === "fulfilled");
     if (deleted.length > 0) {
-      let next = loadKnownCids(userId);
-      deleted.forEach((cid) => {
-        next = removeKnownCid(userId, cid);
-      });
-      setKnownCids(next);
+      setRows((curr) => curr.filter((f) => !deleted.includes(f.file_cid)));
       setSelected({});
       setSpace(await api.userSpace(token));
+      if (rows.length === deleted.length && page > 1) setPage((v) => Math.max(1, v - 1));
       setStatus(`forgot ${deleted.length} file${deleted.length === 1 ? "" : "s"}`);
       return;
     }
@@ -195,10 +200,41 @@ export default function FilesPage() {
         </section>
       ) : null}
 
+      <section className="hooya-pager">
+        <p className="hooya-pager-label">Page</p>
+        <div className="hooya-pager-row">
+          <button className="action-link hooya-pager-link" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ←
+          </button>
+          {pagerTokens.map((token, i) =>
+            token === "ellipsis" ? (
+              <span key={`ellipsis-${i}`} className="hooya-pager-ellipsis">
+                …
+              </span>
+            ) : token === page ? (
+              <span key={token} className="hooya-pager-current">
+                {token}
+              </span>
+            ) : (
+              <button key={token} className="action-link hooya-pager-link" onClick={() => setPage(token)} disabled={loading}>
+                {token}
+              </button>
+            ),
+          )}
+          <button
+            className="action-link hooya-pager-link"
+            disabled={!nextPageToken || loading}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            →
+          </button>
+        </div>
+      </section>
+
       {loading ? (
         <p>loading...</p>
       ) : rows.length === 0 ? (
-        <p className="muted">no known files yet</p>
+        <p className="muted">no files yet</p>
       ) : (
         <div className="mason-grid">
           {rows.map((f) => (

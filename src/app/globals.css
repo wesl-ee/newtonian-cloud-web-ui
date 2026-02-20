@@ -25,6 +25,19 @@ a {
   text-decoration: none;
 }
 
+p {
+  margin: 0;
+  line-height: 1.5rem;
+}
+
+h2 {
+  margin-bottom: 0;
+}
+
+h1 {
+  margin: 0;
+}
+
 .action-link {
   color: var(--blue);
   transition: color 0.2s ease;
@@ -340,6 +353,45 @@ button {
 
 .select-actions {
   font-size: 1rem;
+}
+
+.hooya-pager {
+  display: grid;
+  gap: 0.4rem;
+  justify-content: start;
+}
+
+.hooya-pager-label {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.hooya-pager-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.hooya-pager-link {
+  font-size: 2rem;
+  line-height: 1;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+.hooya-pager-ellipsis {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.hooya-pager-current {
+  font-size: 2rem;
+  line-height: 1;
+  padding: 0.06rem 0.34rem;
+  border: 0.0625rem solid #777;
 }
 
 .upload-box {

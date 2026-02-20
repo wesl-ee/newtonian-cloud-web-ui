@@ -5,12 +5,13 @@ import { HomeSignupBox } from "@/components/home-signup-box";
 
 type PublicStats = { total_files: number; total_bytes: number };
 type PublicFile = { cid: string; size_bytes: number; created_at: string };
+type Paged<T> = { items: T[]; next_page_token: string; final_page_token: string };
 type PublicCommit = { height: number; root: string; created_at: string };
 
 export default async function HomePage() {
   const [stats, recentFiles, recentCommits] = await Promise.all([
     fetchJson<PublicStats>("/public/stats").catch(() => ({ total_files: 0, total_bytes: 0 })),
-    fetchJson<PublicFile[]>("/public/recent-files").catch(() => []),
+    fetchJson<Paged<PublicFile>>("/public/recent-files").catch(() => ({ items: [], next_page_token: "", final_page_token: "1" })),
     fetchJson<PublicCommit[]>("/public/recent-commits").catch(() => []),
   ]);
 
@@ -38,14 +39,14 @@ export default async function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {recentFiles.length === 0 ? (
+              {recentFiles.items.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="muted">
                     no files yet
                   </td>
                 </tr>
               ) : (
-                recentFiles.map((f) => (
+                recentFiles.items.map((f) => (
                   <tr key={`${f.cid}-${f.created_at}`}>
                     <td>
                       <Link className="action-link" href={`/files/${encodeURIComponent(f.cid)}`}>
