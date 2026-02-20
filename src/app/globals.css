@@ -363,19 +363,19 @@ button {
 
 .hooya-pager-label {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.4rem;
   line-height: 1;
 }
 
 .hooya-pager-row {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: 0.8rem;
   flex-wrap: wrap;
 }
 
 .hooya-pager-link {
-  font-size: 2rem;
+  font-size: 1.35rem;
   line-height: 1;
   border: 0;
   background: none;
@@ -383,15 +383,31 @@ button {
 }
 
 .hooya-pager-ellipsis {
-  font-size: 2rem;
+  font-size: 1.35rem;
   line-height: 1;
 }
 
 .hooya-pager-current {
-  font-size: 2rem;
+  font-size: 1.2rem;
   line-height: 1;
-  padding: 0.06rem 0.34rem;
+  padding: 0.08rem 0.25rem;
   border: 0.0625rem solid #777;
+  width: 3.4rem;
+  text-align: center;
+  background: #fff;
+  color: #000;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.hooya-pager-jump {
+  margin: 0;
+  line-height: 0;
+}
+
+.hooya-pager-current::-webkit-outer-spin-button,
+.hooya-pager-current::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .upload-box {

@@ -27,6 +27,7 @@ export default function FilesPage() {
   const [selected, setSelected] = useState<Record<string, true>>({});
   const [selectMode, setSelectMode] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [finalPage, setFinalPage] = useState(1);
   const [nextPageToken, setNextPageToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -109,6 +110,9 @@ export default function FilesPage() {
     if (!space) return "";
     return `${formatBytes(space.used_bytes)} / ${formatBytes(space.quota_bytes)}`;
   }, [space]);
+  useEffect(() => {
+    setPageInput(String(page));
+  }, [page]);
   const pagerTokens = useMemo<PagerToken[]>(() => {
     if (finalPage <= 7) return Array.from({ length: finalPage }, (_, i) => i + 1);
     const out: PagerToken[] = [1];
@@ -120,6 +124,18 @@ export default function FilesPage() {
     out.push(finalPage);
     return out;
   }, [finalPage, page]);
+  const hasPrev = page > 1;
+  const hasNext = !!nextPageToken;
+
+  function jumpToPage() {
+    const raw = Number.parseInt(pageInput, 10);
+    if (!Number.isFinite(raw)) {
+      setPageInput(String(page));
+      return;
+    }
+    const next = Math.max(1, Math.min(finalPage, raw));
+    setPage(next);
+  }
 
   function toggleSelected(cid: string) {
     setSelected((curr) => {
@@ -203,31 +219,46 @@ export default function FilesPage() {
       <section className="hooya-pager">
         <p className="hooya-pager-label">Page</p>
         <div className="hooya-pager-row">
-          <button className="action-link hooya-pager-link" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-            ←
-          </button>
+          {hasPrev ? (
+            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              ←
+            </button>
+          ) : null}
           {pagerTokens.map((token, i) =>
             token === "ellipsis" ? (
               <span key={`ellipsis-${i}`} className="hooya-pager-ellipsis">
                 …
               </span>
             ) : token === page ? (
-              <span key={token} className="hooya-pager-current">
-                {token}
-              </span>
+              <form
+                key={`jump-${token}`}
+                className="hooya-pager-jump"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  jumpToPage();
+                }}
+              >
+                <input
+                  className="hooya-pager-current"
+                  type="number"
+                  min={1}
+                  max={finalPage}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                />
+              </form>
             ) : (
               <button key={token} className="action-link hooya-pager-link" onClick={() => setPage(token)} disabled={loading}>
                 {token}
               </button>
             ),
           )}
-          <button
-            className="action-link hooya-pager-link"
-            disabled={!nextPageToken || loading}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            →
-          </button>
+          {hasNext ? (
+            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>
+              →
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -267,6 +298,51 @@ export default function FilesPage() {
           ))}
         </div>
       )}
+      <section className="hooya-pager">
+        <p className="hooya-pager-label">Page</p>
+        <div className="hooya-pager-row">
+          {hasPrev ? (
+            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              ←
+            </button>
+          ) : null}
+          {pagerTokens.map((token, i) =>
+            token === "ellipsis" ? (
+              <span key={`ellipsis-bottom-${i}`} className="hooya-pager-ellipsis">
+                …
+              </span>
+            ) : token === page ? (
+              <form
+                key={`jump-bottom-${token}`}
+                className="hooya-pager-jump"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  jumpToPage();
+                }}
+              >
+                <input
+                  className="hooya-pager-current"
+                  type="number"
+                  min={1}
+                  max={finalPage}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                />
+              </form>
+            ) : (
+              <button key={`bottom-${token}`} className="action-link hooya-pager-link" onClick={() => setPage(token)} disabled={loading}>
+                {token}
+              </button>
+            ),
+          )}
+          {hasNext ? (
+            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>
+              →
+            </button>
+          ) : null}
+        </div>
+      </section>
       {status ? <p className="muted">{status}</p> : null}
     </div>
   );
