@@ -22,7 +22,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    setSession(loadSession());
+    const existing = loadSession();
+    setSession(existing);
+    if (existing) saveSession(existing);
     setReady(true);
   }, []);
 

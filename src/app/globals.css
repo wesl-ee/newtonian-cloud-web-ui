@@ -363,7 +363,7 @@ button {
 
 .hooya-pager-label {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.05rem;
   line-height: 1;
 }
 
@@ -423,10 +423,12 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  align-items: start;
 }
 
-#file-view.orientation-landscape {
-  grid-template-columns: 1fr;
+#file-view > .stack {
+  align-self: start;
+  align-content: start;
 }
 
 .detail-thumb {

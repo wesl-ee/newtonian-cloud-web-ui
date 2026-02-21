@@ -2309,6 +2309,7 @@ $root.storage = (function() {
              * @property {number|Long|null} [sizeBytes] FileMetadataReply sizeBytes
              * @property {string|null} [status] FileMetadataReply status
              * @property {number|Long|null} [height] FileMetadataReply height
+             * @property {string|null} [processingStatus] FileMetadataReply processingStatus
              */
 
             /**
@@ -2375,6 +2376,14 @@ $root.storage = (function() {
             FileMetadataReply.prototype.height = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
             /**
+             * FileMetadataReply processingStatus.
+             * @member {string} processingStatus
+             * @memberof storage.files.FileMetadataReply
+             * @instance
+             */
+            FileMetadataReply.prototype.processingStatus = "";
+
+            /**
              * Creates a new FileMetadataReply instance using the specified properties.
              * @function create
              * @memberof storage.files.FileMetadataReply
@@ -2410,6 +2419,8 @@ $root.storage = (function() {
                     writer.uint32(/* id 5, wireType 2 =*/42).string(message.status);
                 if (message.height != null && Object.hasOwnProperty.call(message, "height"))
                     writer.uint32(/* id 6, wireType 0 =*/48).uint64(message.height);
+                if (message.processingStatus != null && Object.hasOwnProperty.call(message, "processingStatus"))
+                    writer.uint32(/* id 7, wireType 2 =*/58).string(message.processingStatus);
                 return writer;
             };
 
@@ -2468,6 +2479,10 @@ $root.storage = (function() {
                             message.height = reader.uint64();
                             break;
                         }
+                    case 7: {
+                            message.processingStatus = reader.string();
+                            break;
+                        }
                     default:
                         reader.skipType(tag & 7);
                         break;
@@ -2521,6 +2536,9 @@ $root.storage = (function() {
                 if (message.height != null && message.hasOwnProperty("height"))
                     if (!$util.isInteger(message.height) && !(message.height && $util.isInteger(message.height.low) && $util.isInteger(message.height.high)))
                         return "height: integer|Long expected";
+                if (message.processingStatus != null && message.hasOwnProperty("processingStatus"))
+                    if (!$util.isString(message.processingStatus))
+                        return "processingStatus: string expected";
                 return null;
             };
 
@@ -2562,6 +2580,8 @@ $root.storage = (function() {
                         message.height = object.height;
                     else if (typeof object.height === "object")
                         message.height = new $util.LongBits(object.height.low >>> 0, object.height.high >>> 0).toNumber(true);
+                if (object.processingStatus != null)
+                    message.processingStatus = String(object.processingStatus);
                 return message;
             };
 
@@ -2593,6 +2613,7 @@ $root.storage = (function() {
                         object.height = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                     } else
                         object.height = options.longs === String ? "0" : 0;
+                    object.processingStatus = "";
                 }
                 if (message.fileCid != null && message.hasOwnProperty("fileCid"))
                     object.fileCid = message.fileCid;
@@ -2612,6 +2633,8 @@ $root.storage = (function() {
                         object.height = options.longs === String ? String(message.height) : message.height;
                     else
                         object.height = options.longs === String ? $util.Long.prototype.toString.call(message.height) : options.longs === Number ? new $util.LongBits(message.height.low >>> 0, message.height.high >>> 0).toNumber(true) : message.height;
+                if (message.processingStatus != null && message.hasOwnProperty("processingStatus"))
+                    object.processingStatus = message.processingStatus;
                 return object;
             };
 
@@ -2854,6 +2877,611 @@ $root.storage = (function() {
             };
 
             return FileDataReply;
+        })();
+
+        files.ThumbnailItem = (function() {
+
+            /**
+             * Properties of a ThumbnailItem.
+             * @memberof storage.files
+             * @interface IThumbnailItem
+             * @property {string|null} [thumbnailCid] ThumbnailItem thumbnailCid
+             * @property {number|null} [longEdge] ThumbnailItem longEdge
+             * @property {string|null} [mimeType] ThumbnailItem mimeType
+             * @property {number|Long|null} [sizeBytes] ThumbnailItem sizeBytes
+             * @property {number|null} [width] ThumbnailItem width
+             * @property {number|null} [height] ThumbnailItem height
+             */
+
+            /**
+             * Constructs a new ThumbnailItem.
+             * @memberof storage.files
+             * @classdesc Represents a ThumbnailItem.
+             * @implements IThumbnailItem
+             * @constructor
+             * @param {storage.files.IThumbnailItem=} [properties] Properties to set
+             */
+            function ThumbnailItem(properties) {
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * ThumbnailItem thumbnailCid.
+             * @member {string} thumbnailCid
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.thumbnailCid = "";
+
+            /**
+             * ThumbnailItem longEdge.
+             * @member {number} longEdge
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.longEdge = 0;
+
+            /**
+             * ThumbnailItem mimeType.
+             * @member {string} mimeType
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.mimeType = "";
+
+            /**
+             * ThumbnailItem sizeBytes.
+             * @member {number|Long} sizeBytes
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.sizeBytes = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+            /**
+             * ThumbnailItem width.
+             * @member {number} width
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.width = 0;
+
+            /**
+             * ThumbnailItem height.
+             * @member {number} height
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             */
+            ThumbnailItem.prototype.height = 0;
+
+            /**
+             * Creates a new ThumbnailItem instance using the specified properties.
+             * @function create
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {storage.files.IThumbnailItem=} [properties] Properties to set
+             * @returns {storage.files.ThumbnailItem} ThumbnailItem instance
+             */
+            ThumbnailItem.create = function create(properties) {
+                return new ThumbnailItem(properties);
+            };
+
+            /**
+             * Encodes the specified ThumbnailItem message. Does not implicitly {@link storage.files.ThumbnailItem.verify|verify} messages.
+             * @function encode
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {storage.files.IThumbnailItem} message ThumbnailItem message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ThumbnailItem.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.thumbnailCid != null && Object.hasOwnProperty.call(message, "thumbnailCid"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.thumbnailCid);
+                if (message.longEdge != null && Object.hasOwnProperty.call(message, "longEdge"))
+                    writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.longEdge);
+                if (message.mimeType != null && Object.hasOwnProperty.call(message, "mimeType"))
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.mimeType);
+                if (message.sizeBytes != null && Object.hasOwnProperty.call(message, "sizeBytes"))
+                    writer.uint32(/* id 4, wireType 0 =*/32).uint64(message.sizeBytes);
+                if (message.width != null && Object.hasOwnProperty.call(message, "width"))
+                    writer.uint32(/* id 5, wireType 0 =*/40).uint32(message.width);
+                if (message.height != null && Object.hasOwnProperty.call(message, "height"))
+                    writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.height);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified ThumbnailItem message, length delimited. Does not implicitly {@link storage.files.ThumbnailItem.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {storage.files.IThumbnailItem} message ThumbnailItem message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ThumbnailItem.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a ThumbnailItem message from the specified reader or buffer.
+             * @function decode
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {storage.files.ThumbnailItem} ThumbnailItem
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ThumbnailItem.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.storage.files.ThumbnailItem();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1: {
+                            message.thumbnailCid = reader.string();
+                            break;
+                        }
+                    case 2: {
+                            message.longEdge = reader.uint32();
+                            break;
+                        }
+                    case 3: {
+                            message.mimeType = reader.string();
+                            break;
+                        }
+                    case 4: {
+                            message.sizeBytes = reader.uint64();
+                            break;
+                        }
+                    case 5: {
+                            message.width = reader.uint32();
+                            break;
+                        }
+                    case 6: {
+                            message.height = reader.uint32();
+                            break;
+                        }
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a ThumbnailItem message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {storage.files.ThumbnailItem} ThumbnailItem
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ThumbnailItem.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a ThumbnailItem message.
+             * @function verify
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            ThumbnailItem.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.thumbnailCid != null && message.hasOwnProperty("thumbnailCid"))
+                    if (!$util.isString(message.thumbnailCid))
+                        return "thumbnailCid: string expected";
+                if (message.longEdge != null && message.hasOwnProperty("longEdge"))
+                    if (!$util.isInteger(message.longEdge))
+                        return "longEdge: integer expected";
+                if (message.mimeType != null && message.hasOwnProperty("mimeType"))
+                    if (!$util.isString(message.mimeType))
+                        return "mimeType: string expected";
+                if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes"))
+                    if (!$util.isInteger(message.sizeBytes) && !(message.sizeBytes && $util.isInteger(message.sizeBytes.low) && $util.isInteger(message.sizeBytes.high)))
+                        return "sizeBytes: integer|Long expected";
+                if (message.width != null && message.hasOwnProperty("width"))
+                    if (!$util.isInteger(message.width))
+                        return "width: integer expected";
+                if (message.height != null && message.hasOwnProperty("height"))
+                    if (!$util.isInteger(message.height))
+                        return "height: integer expected";
+                return null;
+            };
+
+            /**
+             * Creates a ThumbnailItem message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {storage.files.ThumbnailItem} ThumbnailItem
+             */
+            ThumbnailItem.fromObject = function fromObject(object) {
+                if (object instanceof $root.storage.files.ThumbnailItem)
+                    return object;
+                var message = new $root.storage.files.ThumbnailItem();
+                if (object.thumbnailCid != null)
+                    message.thumbnailCid = String(object.thumbnailCid);
+                if (object.longEdge != null)
+                    message.longEdge = object.longEdge >>> 0;
+                if (object.mimeType != null)
+                    message.mimeType = String(object.mimeType);
+                if (object.sizeBytes != null)
+                    if ($util.Long)
+                        (message.sizeBytes = $util.Long.fromValue(object.sizeBytes)).unsigned = true;
+                    else if (typeof object.sizeBytes === "string")
+                        message.sizeBytes = parseInt(object.sizeBytes, 10);
+                    else if (typeof object.sizeBytes === "number")
+                        message.sizeBytes = object.sizeBytes;
+                    else if (typeof object.sizeBytes === "object")
+                        message.sizeBytes = new $util.LongBits(object.sizeBytes.low >>> 0, object.sizeBytes.high >>> 0).toNumber(true);
+                if (object.width != null)
+                    message.width = object.width >>> 0;
+                if (object.height != null)
+                    message.height = object.height >>> 0;
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a ThumbnailItem message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {storage.files.ThumbnailItem} message ThumbnailItem
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            ThumbnailItem.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.defaults) {
+                    object.thumbnailCid = "";
+                    object.longEdge = 0;
+                    object.mimeType = "";
+                    if ($util.Long) {
+                        var long = new $util.Long(0, 0, true);
+                        object.sizeBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    } else
+                        object.sizeBytes = options.longs === String ? "0" : 0;
+                    object.width = 0;
+                    object.height = 0;
+                }
+                if (message.thumbnailCid != null && message.hasOwnProperty("thumbnailCid"))
+                    object.thumbnailCid = message.thumbnailCid;
+                if (message.longEdge != null && message.hasOwnProperty("longEdge"))
+                    object.longEdge = message.longEdge;
+                if (message.mimeType != null && message.hasOwnProperty("mimeType"))
+                    object.mimeType = message.mimeType;
+                if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes"))
+                    if (typeof message.sizeBytes === "number")
+                        object.sizeBytes = options.longs === String ? String(message.sizeBytes) : message.sizeBytes;
+                    else
+                        object.sizeBytes = options.longs === String ? $util.Long.prototype.toString.call(message.sizeBytes) : options.longs === Number ? new $util.LongBits(message.sizeBytes.low >>> 0, message.sizeBytes.high >>> 0).toNumber(true) : message.sizeBytes;
+                if (message.width != null && message.hasOwnProperty("width"))
+                    object.width = message.width;
+                if (message.height != null && message.hasOwnProperty("height"))
+                    object.height = message.height;
+                return object;
+            };
+
+            /**
+             * Converts this ThumbnailItem to JSON.
+             * @function toJSON
+             * @memberof storage.files.ThumbnailItem
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            ThumbnailItem.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the default type url for ThumbnailItem
+             * @function getTypeUrl
+             * @memberof storage.files.ThumbnailItem
+             * @static
+             * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns {string} The default type url
+             */
+            ThumbnailItem.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                if (typeUrlPrefix === undefined) {
+                    typeUrlPrefix = "type.googleapis.com";
+                }
+                return typeUrlPrefix + "/storage.files.ThumbnailItem";
+            };
+
+            return ThumbnailItem;
+        })();
+
+        files.ThumbnailsReply = (function() {
+
+            /**
+             * Properties of a ThumbnailsReply.
+             * @memberof storage.files
+             * @interface IThumbnailsReply
+             * @property {string|null} [fileCid] ThumbnailsReply fileCid
+             * @property {Array.<storage.files.IThumbnailItem>|null} [thumbnails] ThumbnailsReply thumbnails
+             * @property {string|null} [processingStatus] ThumbnailsReply processingStatus
+             */
+
+            /**
+             * Constructs a new ThumbnailsReply.
+             * @memberof storage.files
+             * @classdesc Represents a ThumbnailsReply.
+             * @implements IThumbnailsReply
+             * @constructor
+             * @param {storage.files.IThumbnailsReply=} [properties] Properties to set
+             */
+            function ThumbnailsReply(properties) {
+                this.thumbnails = [];
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * ThumbnailsReply fileCid.
+             * @member {string} fileCid
+             * @memberof storage.files.ThumbnailsReply
+             * @instance
+             */
+            ThumbnailsReply.prototype.fileCid = "";
+
+            /**
+             * ThumbnailsReply thumbnails.
+             * @member {Array.<storage.files.IThumbnailItem>} thumbnails
+             * @memberof storage.files.ThumbnailsReply
+             * @instance
+             */
+            ThumbnailsReply.prototype.thumbnails = $util.emptyArray;
+
+            /**
+             * ThumbnailsReply processingStatus.
+             * @member {string} processingStatus
+             * @memberof storage.files.ThumbnailsReply
+             * @instance
+             */
+            ThumbnailsReply.prototype.processingStatus = "";
+
+            /**
+             * Creates a new ThumbnailsReply instance using the specified properties.
+             * @function create
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {storage.files.IThumbnailsReply=} [properties] Properties to set
+             * @returns {storage.files.ThumbnailsReply} ThumbnailsReply instance
+             */
+            ThumbnailsReply.create = function create(properties) {
+                return new ThumbnailsReply(properties);
+            };
+
+            /**
+             * Encodes the specified ThumbnailsReply message. Does not implicitly {@link storage.files.ThumbnailsReply.verify|verify} messages.
+             * @function encode
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {storage.files.IThumbnailsReply} message ThumbnailsReply message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ThumbnailsReply.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.fileCid != null && Object.hasOwnProperty.call(message, "fileCid"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.fileCid);
+                if (message.thumbnails != null && message.thumbnails.length)
+                    for (var i = 0; i < message.thumbnails.length; ++i)
+                        $root.storage.files.ThumbnailItem.encode(message.thumbnails[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+                if (message.processingStatus != null && Object.hasOwnProperty.call(message, "processingStatus"))
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.processingStatus);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified ThumbnailsReply message, length delimited. Does not implicitly {@link storage.files.ThumbnailsReply.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {storage.files.IThumbnailsReply} message ThumbnailsReply message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            ThumbnailsReply.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a ThumbnailsReply message from the specified reader or buffer.
+             * @function decode
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {storage.files.ThumbnailsReply} ThumbnailsReply
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ThumbnailsReply.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.storage.files.ThumbnailsReply();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1: {
+                            message.fileCid = reader.string();
+                            break;
+                        }
+                    case 2: {
+                            if (!(message.thumbnails && message.thumbnails.length))
+                                message.thumbnails = [];
+                            message.thumbnails.push($root.storage.files.ThumbnailItem.decode(reader, reader.uint32()));
+                            break;
+                        }
+                    case 3: {
+                            message.processingStatus = reader.string();
+                            break;
+                        }
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a ThumbnailsReply message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {storage.files.ThumbnailsReply} ThumbnailsReply
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            ThumbnailsReply.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a ThumbnailsReply message.
+             * @function verify
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            ThumbnailsReply.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.fileCid != null && message.hasOwnProperty("fileCid"))
+                    if (!$util.isString(message.fileCid))
+                        return "fileCid: string expected";
+                if (message.thumbnails != null && message.hasOwnProperty("thumbnails")) {
+                    if (!Array.isArray(message.thumbnails))
+                        return "thumbnails: array expected";
+                    for (var i = 0; i < message.thumbnails.length; ++i) {
+                        var error = $root.storage.files.ThumbnailItem.verify(message.thumbnails[i]);
+                        if (error)
+                            return "thumbnails." + error;
+                    }
+                }
+                if (message.processingStatus != null && message.hasOwnProperty("processingStatus"))
+                    if (!$util.isString(message.processingStatus))
+                        return "processingStatus: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a ThumbnailsReply message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {storage.files.ThumbnailsReply} ThumbnailsReply
+             */
+            ThumbnailsReply.fromObject = function fromObject(object) {
+                if (object instanceof $root.storage.files.ThumbnailsReply)
+                    return object;
+                var message = new $root.storage.files.ThumbnailsReply();
+                if (object.fileCid != null)
+                    message.fileCid = String(object.fileCid);
+                if (object.thumbnails) {
+                    if (!Array.isArray(object.thumbnails))
+                        throw TypeError(".storage.files.ThumbnailsReply.thumbnails: array expected");
+                    message.thumbnails = [];
+                    for (var i = 0; i < object.thumbnails.length; ++i) {
+                        if (typeof object.thumbnails[i] !== "object")
+                            throw TypeError(".storage.files.ThumbnailsReply.thumbnails: object expected");
+                        message.thumbnails[i] = $root.storage.files.ThumbnailItem.fromObject(object.thumbnails[i]);
+                    }
+                }
+                if (object.processingStatus != null)
+                    message.processingStatus = String(object.processingStatus);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a ThumbnailsReply message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {storage.files.ThumbnailsReply} message ThumbnailsReply
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            ThumbnailsReply.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.arrays || options.defaults)
+                    object.thumbnails = [];
+                if (options.defaults) {
+                    object.fileCid = "";
+                    object.processingStatus = "";
+                }
+                if (message.fileCid != null && message.hasOwnProperty("fileCid"))
+                    object.fileCid = message.fileCid;
+                if (message.thumbnails && message.thumbnails.length) {
+                    object.thumbnails = [];
+                    for (var j = 0; j < message.thumbnails.length; ++j)
+                        object.thumbnails[j] = $root.storage.files.ThumbnailItem.toObject(message.thumbnails[j], options);
+                }
+                if (message.processingStatus != null && message.hasOwnProperty("processingStatus"))
+                    object.processingStatus = message.processingStatus;
+                return object;
+            };
+
+            /**
+             * Converts this ThumbnailsReply to JSON.
+             * @function toJSON
+             * @memberof storage.files.ThumbnailsReply
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            ThumbnailsReply.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the default type url for ThumbnailsReply
+             * @function getTypeUrl
+             * @memberof storage.files.ThumbnailsReply
+             * @static
+             * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns {string} The default type url
+             */
+            ThumbnailsReply.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                if (typeUrlPrefix === undefined) {
+                    typeUrlPrefix = "type.googleapis.com";
+                }
+                return typeUrlPrefix + "/storage.files.ThumbnailsReply";
+            };
+
+            return ThumbnailsReply;
         })();
 
         files.FileProofReply = (function() {
@@ -4267,6 +4895,209 @@ $root.storage = (function() {
             return WalletVerifyRequest;
         })();
 
+        files.RefreshRequest = (function() {
+
+            /**
+             * Properties of a RefreshRequest.
+             * @memberof storage.files
+             * @interface IRefreshRequest
+             * @property {string|null} [refreshToken] RefreshRequest refreshToken
+             */
+
+            /**
+             * Constructs a new RefreshRequest.
+             * @memberof storage.files
+             * @classdesc Represents a RefreshRequest.
+             * @implements IRefreshRequest
+             * @constructor
+             * @param {storage.files.IRefreshRequest=} [properties] Properties to set
+             */
+            function RefreshRequest(properties) {
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * RefreshRequest refreshToken.
+             * @member {string} refreshToken
+             * @memberof storage.files.RefreshRequest
+             * @instance
+             */
+            RefreshRequest.prototype.refreshToken = "";
+
+            /**
+             * Creates a new RefreshRequest instance using the specified properties.
+             * @function create
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {storage.files.IRefreshRequest=} [properties] Properties to set
+             * @returns {storage.files.RefreshRequest} RefreshRequest instance
+             */
+            RefreshRequest.create = function create(properties) {
+                return new RefreshRequest(properties);
+            };
+
+            /**
+             * Encodes the specified RefreshRequest message. Does not implicitly {@link storage.files.RefreshRequest.verify|verify} messages.
+             * @function encode
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {storage.files.IRefreshRequest} message RefreshRequest message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            RefreshRequest.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.refreshToken != null && Object.hasOwnProperty.call(message, "refreshToken"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.refreshToken);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified RefreshRequest message, length delimited. Does not implicitly {@link storage.files.RefreshRequest.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {storage.files.IRefreshRequest} message RefreshRequest message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            RefreshRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a RefreshRequest message from the specified reader or buffer.
+             * @function decode
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {storage.files.RefreshRequest} RefreshRequest
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            RefreshRequest.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.storage.files.RefreshRequest();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1: {
+                            message.refreshToken = reader.string();
+                            break;
+                        }
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a RefreshRequest message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {storage.files.RefreshRequest} RefreshRequest
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            RefreshRequest.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a RefreshRequest message.
+             * @function verify
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            RefreshRequest.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.refreshToken != null && message.hasOwnProperty("refreshToken"))
+                    if (!$util.isString(message.refreshToken))
+                        return "refreshToken: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a RefreshRequest message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {storage.files.RefreshRequest} RefreshRequest
+             */
+            RefreshRequest.fromObject = function fromObject(object) {
+                if (object instanceof $root.storage.files.RefreshRequest)
+                    return object;
+                var message = new $root.storage.files.RefreshRequest();
+                if (object.refreshToken != null)
+                    message.refreshToken = String(object.refreshToken);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a RefreshRequest message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {storage.files.RefreshRequest} message RefreshRequest
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            RefreshRequest.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.defaults)
+                    object.refreshToken = "";
+                if (message.refreshToken != null && message.hasOwnProperty("refreshToken"))
+                    object.refreshToken = message.refreshToken;
+                return object;
+            };
+
+            /**
+             * Converts this RefreshRequest to JSON.
+             * @function toJSON
+             * @memberof storage.files.RefreshRequest
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            RefreshRequest.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the default type url for RefreshRequest
+             * @function getTypeUrl
+             * @memberof storage.files.RefreshRequest
+             * @static
+             * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns {string} The default type url
+             */
+            RefreshRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                if (typeUrlPrefix === undefined) {
+                    typeUrlPrefix = "type.googleapis.com";
+                }
+                return typeUrlPrefix + "/storage.files.RefreshRequest";
+            };
+
+            return RefreshRequest;
+        })();
+
         files.AuthReply = (function() {
 
             /**
@@ -4275,6 +5106,7 @@ $root.storage = (function() {
              * @interface IAuthReply
              * @property {string|null} [token] AuthReply token
              * @property {string|null} [userId] AuthReply userId
+             * @property {string|null} [refreshToken] AuthReply refreshToken
              */
 
             /**
@@ -4309,6 +5141,14 @@ $root.storage = (function() {
             AuthReply.prototype.userId = "";
 
             /**
+             * AuthReply refreshToken.
+             * @member {string} refreshToken
+             * @memberof storage.files.AuthReply
+             * @instance
+             */
+            AuthReply.prototype.refreshToken = "";
+
+            /**
              * Creates a new AuthReply instance using the specified properties.
              * @function create
              * @memberof storage.files.AuthReply
@@ -4336,6 +5176,8 @@ $root.storage = (function() {
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.token);
                 if (message.userId != null && Object.hasOwnProperty.call(message, "userId"))
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.userId);
+                if (message.refreshToken != null && Object.hasOwnProperty.call(message, "refreshToken"))
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.refreshToken);
                 return writer;
             };
 
@@ -4376,6 +5218,10 @@ $root.storage = (function() {
                         }
                     case 2: {
                             message.userId = reader.string();
+                            break;
+                        }
+                    case 3: {
+                            message.refreshToken = reader.string();
                             break;
                         }
                     default:
@@ -4419,6 +5265,9 @@ $root.storage = (function() {
                 if (message.userId != null && message.hasOwnProperty("userId"))
                     if (!$util.isString(message.userId))
                         return "userId: string expected";
+                if (message.refreshToken != null && message.hasOwnProperty("refreshToken"))
+                    if (!$util.isString(message.refreshToken))
+                        return "refreshToken: string expected";
                 return null;
             };
 
@@ -4438,6 +5287,8 @@ $root.storage = (function() {
                     message.token = String(object.token);
                 if (object.userId != null)
                     message.userId = String(object.userId);
+                if (object.refreshToken != null)
+                    message.refreshToken = String(object.refreshToken);
                 return message;
             };
 
@@ -4457,11 +5308,14 @@ $root.storage = (function() {
                 if (options.defaults) {
                     object.token = "";
                     object.userId = "";
+                    object.refreshToken = "";
                 }
                 if (message.token != null && message.hasOwnProperty("token"))
                     object.token = message.token;
                 if (message.userId != null && message.hasOwnProperty("userId"))
                     object.userId = message.userId;
+                if (message.refreshToken != null && message.hasOwnProperty("refreshToken"))
+                    object.refreshToken = message.refreshToken;
                 return object;
             };
 

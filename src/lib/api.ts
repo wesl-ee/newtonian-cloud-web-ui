@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/constants";
+import { clearSession, loadSession, saveSession } from "@/lib/auth-storage";
 import wire from "@/lib/proto/files";
 
 type PB = {
@@ -15,6 +16,7 @@ type FilesNamespace = {
   CompleteUploadReply: PB;
   FileRequest: PB;
   FileMetadataReply: PB;
+  ThumbnailsReply: PB;
   FileDataReply: PB;
   FileProofReply: PB;
   DeleteFileReply: PB;
@@ -22,10 +24,12 @@ type FilesNamespace = {
   WalletChallengeRequest: PB;
   WalletChallengeReply: PB;
   WalletVerifyRequest: PB;
+  RefreshRequest: PB;
   AuthReply: PB;
 };
 
 const files = (wire as { storage: { files: FilesNamespace } }).storage.files;
+let refreshInFlight: Promise<string> | null = null;
 
 function asNumber(v: number | { toNumber: () => number }): number {
   if (typeof v === "number") return v;
@@ -47,14 +51,16 @@ async function pbPost<TReq, TRes>(
   resType: PB,
   token?: string,
 ): Promise<TRes> {
-  const resp = await fetch(`${API_URL}${path}`, {
+  const body = reqType && req ? reqType.encode(req).finish() : undefined;
+  const run = (authToken?: string) => fetch(`${API_URL}${path}`, {
     method: "POST",
     headers: {
       ...(reqType ? { "Content-Type": "application/x-protobuf" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     },
-    body: reqType && req ? reqType.encode(req).finish() : undefined,
+    body,
   });
+  const resp = token ? await requestWithRefresh(token, run) : await run();
   if (!resp.ok) throw new Error(await decodeError(resp));
   const buf = new Uint8Array(await resp.arrayBuffer());
   return resType.decode(buf) as TRes;
@@ -74,12 +80,54 @@ export async function fetchJson<T>(path: string): Promise<T> {
 }
 
 async function fetchJsonAuth<T>(path: string, token: string): Promise<T> {
-  const resp = await fetch(`${API_URL}${path}`, {
+  const run = (authToken?: string) => fetch(`${API_URL}${path}`, {
     cache: "no-store",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
   });
+  const resp = await requestWithRefresh(token, run);
   if (!resp.ok) throw new Error(await decodeError(resp));
   return (await resp.json()) as T;
+}
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const session = loadSession();
+    if (!session?.refreshToken) throw new Error("missing refresh token");
+    const reply = await pbPost<{ refreshToken: string }, { token: string; refreshToken: string; userId: string }>(
+      "/auth/refresh",
+      files.RefreshRequest,
+      { refreshToken: session.refreshToken },
+      files.AuthReply,
+    );
+    if (!reply.token || !reply.refreshToken || !reply.userId) throw new Error("refresh failed");
+    saveSession({
+      token: reply.token,
+      refreshToken: reply.refreshToken,
+      userId: reply.userId,
+    });
+    return reply.token;
+  })();
+  try {
+    return await refreshInFlight;
+  } catch (error) {
+    clearSession();
+    throw error;
+  } finally {
+    refreshInFlight = null;
+  }
+}
+
+async function requestWithRefresh(
+  token: string,
+  run: (authToken: string) => Promise<Response>,
+): Promise<Response> {
+  const currentToken = loadSession()?.token || token;
+  let resp = await run(currentToken);
+  if (resp.status !== 401) return resp;
+  const next = await refreshAccessToken();
+  resp = await run(next);
+  return resp;
 }
 
 export const api = {
@@ -127,6 +175,7 @@ export const api = {
         sizeBytes: number | { toNumber: () => number };
         status: string;
         height: number | { toNumber: () => number };
+        processingStatus: string;
       }
     >(
       "/files/get",
@@ -141,6 +190,41 @@ export const api = {
       size_bytes: asNumber(r.sizeBytes),
       status: r.status,
       height: asNumber(r.height),
+      processing_status: r.processingStatus,
+    }));
+  },
+  fileThumbnails(token: string, cid: string) {
+    return pbPost<
+      { fileCid: string },
+      {
+        fileCid: string;
+        processingStatus: string;
+        thumbnails: Array<{
+          thumbnailCid: string;
+          longEdge: number;
+          mimeType: string;
+          sizeBytes: number | { toNumber: () => number };
+          width: number;
+          height: number;
+        }>;
+      }
+    >(
+      "/files/thumbnails",
+      files.FileRequest,
+      { fileCid: cid },
+      files.ThumbnailsReply,
+      token,
+    ).then((r) => ({
+      file_cid: r.fileCid,
+      processing_status: r.processingStatus,
+      thumbnails: r.thumbnails.map((t) => ({
+        thumbnail_cid: t.thumbnailCid,
+        long_edge: t.longEdge,
+        mime_type: t.mimeType,
+        size_bytes: asNumber(t.sizeBytes),
+        width: t.width,
+        height: t.height,
+      })),
     }));
   },
   fileData(token: string, cid: string) {
@@ -187,6 +271,7 @@ export const api = {
         mime_type: string;
         size_bytes: number;
         status: string;
+        processing_status: string;
         height: number;
         created_at: string;
       }>;
@@ -212,17 +297,25 @@ export const api = {
     );
   },
   walletVerify(address: string, signature: string) {
-    return pbPost<{ address: string; signature: string }, { token: string; userId: string }>(
+    return pbPost<{ address: string; signature: string }, { token: string; refreshToken: string; userId: string }>(
       "/auth/wallet/verify",
       files.WalletVerifyRequest,
       { address, signature },
       files.AuthReply,
-    ).then((r) => ({ token: r.token, user_id: r.userId }));
+    ).then((r) => ({
+      token: r.token,
+      refresh_token: r.refreshToken,
+      user_id: r.userId,
+    }));
   },
   ssoCallback(code: string) {
-    return pbGet<{ token: string; userId: string }>(
+    return pbGet<{ token: string; refreshToken: string; userId: string }>(
       `/auth/sso/callback?code=${encodeURIComponent(code)}`,
       files.AuthReply,
-    ).then((r) => ({ token: r.token, user_id: r.userId }));
+    ).then((r) => ({
+      token: r.token,
+      refresh_token: r.refreshToken,
+      user_id: r.userId,
+    }));
   },
 };

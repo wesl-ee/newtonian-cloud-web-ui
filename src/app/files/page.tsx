@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatBytes } from "@/lib/fmt";
@@ -13,17 +13,38 @@ type FileMeta = {
   mime_type: string;
   size_bytes: number;
   status: string;
+  processing_status: string;
+  height: number;
+};
+
+type Thumbnail = {
+  thumbnail_cid: string;
+  long_edge: number;
+  mime_type: string;
+  width: number;
+  height: number;
+};
+
+type PreviewItem = {
+  url: string;
+  mime: string;
+  width: number;
   height: number;
 };
 
 type PagerToken = number | "ellipsis";
+
+function thumbSrc(cid: string): string {
+  return `/api/thumb/${encodeURIComponent(cid)}`;
+}
 
 export default function FilesPage() {
   const auth = useAuth();
   const router = useRouter();
   const [space, setSpace] = useState<{ used_bytes: number; quota_bytes: number } | null>(null);
   const [rows, setRows] = useState<FileMeta[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [previews, setPreviews] = useState<Record<string, PreviewItem>>({});
+  const [processing, setProcessing] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Record<string, true>>({});
   const [selectMode, setSelectMode] = useState(false);
   const [page, setPage] = useState(1);
@@ -32,9 +53,31 @@ export default function FilesPage() {
   const [nextPageToken, setNextPageToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const thumbsInFlight = useRef<Record<string, true>>({});
 
   const token = auth.session?.token || "";
   const selectedCount = useMemo(() => Object.keys(selected).length, [selected]);
+  const hasProcessing = useMemo(
+    () => rows.some((row) => (processing[row.file_cid] || row.processing_status) === "processing"),
+    [rows, processing],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = Number.parseInt(new URLSearchParams(window.location.search).get("page") || "1", 10);
+    const next = Number.isFinite(raw) ? Math.max(1, raw) : 1;
+    if (next !== page) setPage(next);
+  }, [page]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const raw = Number.parseInt(params.get("page") || "1", 10);
+    const current = Number.isFinite(raw) ? Math.max(1, raw) : 1;
+    if (params.get("page") !== null && current === page) return;
+    params.set("page", String(page));
+    window.history.replaceState({}, "", `/files?${params.toString()}`);
+  }, [page, router]);
 
   useEffect(() => {
     if (!auth.ready || !auth.session) return;
@@ -52,67 +95,111 @@ export default function FilesPage() {
     if (!token) return;
     let active = true;
     setLoading(true);
-    void api.filesList(token, page, 50).then((resp) => {
-      if (!active) return;
-      setRows(resp.items);
-      setNextPageToken(resp.next_page_token);
-      setFinalPage(Math.max(1, Number(resp.final_page_token || "1")));
-      setLoading(false);
-    }).catch((e: unknown) => {
-      if (!active) return;
-      setStatus(e instanceof Error ? e.message : "list failed");
-      setRows([]);
-      setLoading(false);
-    });
+    void api
+      .filesList(token, page, 50)
+      .then((resp) => {
+        if (!active) return;
+        setRows(resp.items);
+        setProcessing(Object.fromEntries(resp.items.map((item) => [item.file_cid, item.processing_status])));
+        setPreviews({});
+        thumbsInFlight.current = {};
+        setNextPageToken(resp.next_page_token);
+        setFinalPage(Math.max(1, Number(resp.final_page_token || "1")));
+        if (page > Math.max(1, Number(resp.final_page_token || "1"))) setPage(Math.max(1, Number(resp.final_page_token || "1")));
+        setLoading(false);
+      })
+      .catch((e: unknown) => {
+        if (!active) return;
+        setStatus(e instanceof Error ? e.message : "list failed");
+        setRows([]);
+        setLoading(false);
+      });
     return () => {
       active = false;
     };
   }, [page, token]);
 
   useEffect(() => {
-    if (!token || rows.length === 0) {
-      setPreviewUrls({});
+    if (!token) return;
+    if (rows.length === 0) {
+      setPreviews({});
+      thumbsInFlight.current = {};
       return;
     }
     let active = true;
-    const next: Record<string, string> = {};
-    const blobUrls: string[] = [];
-    void Promise.all(
-      rows.map(async (f) => {
+    const targets = rows.filter(
+      (row) =>
+        (processing[row.file_cid] || row.processing_status) === "finished" &&
+        !previews[row.file_cid] &&
+        !thumbsInFlight.current[row.file_cid],
+    );
+    void (async () => {
+      for (const row of targets) {
+        if (!active) break;
+        thumbsInFlight.current[row.file_cid] = true;
         try {
-          // temporary: assume files are images and render from cid data; swap to /thumb/{cid}/{small,medium,large} once endpoint ships.
-          const data = await api.fileData(token, f.file_cid);
-          const blob = new Blob([data.data], { type: f.mime_type || "application/octet-stream" });
-          const url = URL.createObjectURL(blob);
-          blobUrls.push(url);
-          next[f.file_cid] = url;
-        } catch {
-          next[f.file_cid] = "";
+          const reply = await api.fileThumbnails(token, row.file_cid);
+          if (!active) break;
+          setProcessing((curr) => ({ ...curr, [row.file_cid]: reply.processing_status || row.processing_status || "processing" }));
+          const thumbs = [...reply.thumbnails].sort((a, b) => a.long_edge - b.long_edge);
+          const medium: Thumbnail | undefined =
+            thumbs.find((t) => t.long_edge === 700) || thumbs.find((t) => t.long_edge > 700) || thumbs[thumbs.length - 1];
+          if (!medium) continue;
+          setPreviews((curr) => ({
+            ...curr,
+            [row.file_cid]: {
+              url: thumbSrc(medium.thumbnail_cid),
+              mime: medium.mime_type || "application/octet-stream",
+              width: medium.width || medium.long_edge || 1,
+              height: medium.height || medium.long_edge || 1,
+            },
+          }));
+        } finally {
+          delete thumbsInFlight.current[row.file_cid];
         }
-      }),
-    ).then(() => {
-      if (!active) {
-        blobUrls.forEach((url) => URL.revokeObjectURL(url));
-        return;
       }
-      setPreviewUrls((prev) => {
-        Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
-        return next;
-      });
-    });
+    })();
     return () => {
       active = false;
-      blobUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [rows, token]);
+  }, [rows, token, processing, previews]);
+
+  useEffect(() => {
+    if (!token || rows.length === 0 || !hasProcessing) return;
+    let active = true;
+    let busy = false;
+    const tick = window.setInterval(() => {
+      if (!active || busy) return;
+      busy = true;
+      void api
+        .filesList(token, page, 50)
+        .then((resp) => {
+          if (!active) return;
+          setRows(resp.items);
+          setProcessing(Object.fromEntries(resp.items.map((item) => [item.file_cid, item.processing_status])));
+          setNextPageToken(resp.next_page_token);
+          setFinalPage(Math.max(1, Number(resp.final_page_token || "1")));
+        })
+        .catch(() => {})
+        .finally(() => {
+          busy = false;
+        });
+    }, 3000);
+    return () => {
+      active = false;
+      window.clearInterval(tick);
+    };
+  }, [rows.length, token, page, hasProcessing]);
 
   const quotaLabel = useMemo(() => {
     if (!space) return "";
     return `${formatBytes(space.used_bytes)} / ${formatBytes(space.quota_bytes)}`;
   }, [space]);
+
   useEffect(() => {
     setPageInput(String(page));
   }, [page]);
+
   const pagerTokens = useMemo<PagerToken[]>(() => {
     if (finalPage <= 7) return Array.from({ length: finalPage }, (_, i) => i + 1);
     const out: PagerToken[] = [1];
@@ -124,6 +211,7 @@ export default function FilesPage() {
     out.push(finalPage);
     return out;
   }, [finalPage, page]);
+
   const hasPrev = page > 1;
   const hasNext = !!nextPageToken;
 
@@ -133,8 +221,7 @@ export default function FilesPage() {
       setPageInput(String(page));
       return;
     }
-    const next = Math.max(1, Math.min(finalPage, raw));
-    setPage(next);
+    setPage(Math.max(1, Math.min(finalPage, raw)));
   }
 
   function toggleSelected(cid: string) {
@@ -163,8 +250,7 @@ export default function FilesPage() {
     setStatus("forget failed");
   }
 
-  if (!auth.ready) return <p>loading...</p>;
-  if (!auth.session) return <p>loading...</p>;
+  if (!auth.ready || !auth.session) return <p>loading...</p>;
 
   return (
     <div className="stack">
@@ -189,12 +275,7 @@ export default function FilesPage() {
           <p>{selectedCount} selected</p>
           <ul className="slash-list select-actions">
             <li>
-              <button
-                className="action-link"
-                onClick={() =>
-                  setSelected(Object.fromEntries(rows.map((f) => [f.file_cid, true])) as Record<string, true>)
-                }
-              >
+              <button className="action-link" onClick={() => setSelected(Object.fromEntries(rows.map((f) => [f.file_cid, true])) as Record<string, true>)}>
                 select all
               </button>
             </li>
@@ -204,11 +285,7 @@ export default function FilesPage() {
               </button>
             </li>
             <li>
-              <button
-                className="action-link"
-                onClick={() => void onDeleteMany(Object.keys(selected))}
-                disabled={selectedCount === 0}
-              >
+              <button className="action-link" onClick={() => void onDeleteMany(Object.keys(selected))} disabled={selectedCount === 0}>
                 forget selected
               </button>
             </li>
@@ -219,19 +296,13 @@ export default function FilesPage() {
       <section className="hooya-pager">
         <p className="hooya-pager-label">Page</p>
         <div className="hooya-pager-row">
-          {hasPrev ? (
-            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              ←
-            </button>
-          ) : null}
-          {pagerTokens.map((token, i) =>
-            token === "ellipsis" ? (
-              <span key={`ellipsis-${i}`} className="hooya-pager-ellipsis">
-                …
-              </span>
-            ) : token === page ? (
+          {hasPrev ? <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button> : null}
+          {pagerTokens.map((tokenItem, i) =>
+            tokenItem === "ellipsis" ? (
+              <span key={`ellipsis-${i}`} className="hooya-pager-ellipsis">…</span>
+            ) : tokenItem === page ? (
               <form
-                key={`jump-${token}`}
+                key={`jump-${tokenItem}`}
                 className="hooya-pager-jump"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -249,16 +320,10 @@ export default function FilesPage() {
                 />
               </form>
             ) : (
-              <button key={token} className="action-link hooya-pager-link" onClick={() => setPage(token)} disabled={loading}>
-                {token}
-              </button>
+              <button key={tokenItem} className="action-link hooya-pager-link" onClick={() => setPage(tokenItem)} disabled={loading}>{tokenItem}</button>
             ),
           )}
-          {hasNext ? (
-            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>
-              →
-            </button>
-          ) : null}
+          {hasNext ? <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>→</button> : null}
         </div>
       </section>
 
@@ -268,52 +333,86 @@ export default function FilesPage() {
         <p className="muted">no files yet</p>
       ) : (
         <div className="mason-grid">
-          {rows.map((f) => (
-            <article key={f.file_cid} className="file-tile">
-              {selectMode ? (
-                <button className="file-tile-hit" onClick={() => toggleSelected(f.file_cid)}>
-                  {previewUrls[f.file_cid] ? (
-                    <img
-                      className={`file-thumb${selected[f.file_cid] ? " file-thumb-selected" : ""}`}
-                      src={previewUrls[f.file_cid]}
-                      alt={f.filename || f.file_cid}
-                    />
-                  ) : (
-                    <div className={`file-thumb file-thumb-empty${selected[f.file_cid] ? " file-thumb-selected" : ""}`} />
-                  )}
-                </button>
-              ) : (
-                <Link className="file-thumb-link" href={`/files/${encodeURIComponent(f.file_cid)}`}>
-                  {previewUrls[f.file_cid] ? (
-                    <img className="file-thumb" src={previewUrls[f.file_cid]} alt={f.filename || f.file_cid} />
-                  ) : (
-                    <div className="file-thumb file-thumb-empty" />
-                  )}
-                </Link>
-              )}
-              <span className="file-meta-chip">
-                {(f.mime_type || "unknown").replace(/^image\//, "")} / {formatBytes(f.size_bytes)}
-              </span>
-            </article>
-          ))}
+          {rows.map((f) => {
+            const preview = previews[f.file_cid];
+            const isVideo = f.mime_type.startsWith("video/") && (preview?.mime || "").startsWith("video/");
+            const processingStatus = processing[f.file_cid] || f.processing_status;
+            return (
+              <article key={f.file_cid} className="file-tile">
+                {selectMode ? (
+                  <button className="file-tile-hit" onClick={() => toggleSelected(f.file_cid)}>
+                    {preview ? (
+                      isVideo ? (
+                        <video
+                          className={`file-thumb${selected[f.file_cid] ? " file-thumb-selected" : ""}`}
+                          src={preview.url}
+                          width={preview.width}
+                          height={preview.height}
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          onMouseEnter={(e) => void e.currentTarget.play()}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.pause();
+                            e.currentTarget.currentTime = 0;
+                          }}
+                        />
+                      ) : (
+                        <img className={`file-thumb${selected[f.file_cid] ? " file-thumb-selected" : ""}`} src={preview.url} width={preview.width} height={preview.height} alt={f.filename || f.file_cid} />
+                      )
+                    ) : (
+                      <div className={`file-thumb file-thumb-empty${selected[f.file_cid] ? " file-thumb-selected" : ""}`} />
+                    )}
+                  </button>
+                ) : (
+                  <Link className="file-thumb-link" href={`/files/${encodeURIComponent(f.file_cid)}`}>
+                    {preview ? (
+                      isVideo ? (
+                        <video
+                          className="file-thumb"
+                          src={preview.url}
+                          width={preview.width}
+                          height={preview.height}
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          onMouseEnter={(e) => void e.currentTarget.play()}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.pause();
+                            e.currentTarget.currentTime = 0;
+                          }}
+                        />
+                      ) : (
+                        <img className="file-thumb" src={preview.url} width={preview.width} height={preview.height} alt={f.filename || f.file_cid} />
+                      )
+                    ) : (
+                      <div className="file-thumb file-thumb-empty" />
+                    )}
+                  </Link>
+                )}
+                <ul className="slash-list file-meta-chip">
+                  <li>{(f.mime_type || "unknown").replace(/^image\//, "")}</li>
+                  <li>{formatBytes(f.size_bytes)}</li>
+                  {processingStatus !== "finished" ? <li>{processingStatus}</li> : null}
+                </ul>
+              </article>
+            );
+          })}
         </div>
       )}
+
       <section className="hooya-pager">
         <p className="hooya-pager-label">Page</p>
         <div className="hooya-pager-row">
-          {hasPrev ? (
-            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              ←
-            </button>
-          ) : null}
-          {pagerTokens.map((token, i) =>
-            token === "ellipsis" ? (
-              <span key={`ellipsis-bottom-${i}`} className="hooya-pager-ellipsis">
-                …
-              </span>
-            ) : token === page ? (
+          {hasPrev ? <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button> : null}
+          {pagerTokens.map((tokenItem, i) =>
+            tokenItem === "ellipsis" ? (
+              <span key={`ellipsis-bottom-${i}`} className="hooya-pager-ellipsis">…</span>
+            ) : tokenItem === page ? (
               <form
-                key={`jump-bottom-${token}`}
+                key={`jump-bottom-${tokenItem}`}
                 className="hooya-pager-jump"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -331,18 +430,13 @@ export default function FilesPage() {
                 />
               </form>
             ) : (
-              <button key={`bottom-${token}`} className="action-link hooya-pager-link" onClick={() => setPage(token)} disabled={loading}>
-                {token}
-              </button>
+              <button key={`bottom-${tokenItem}`} className="action-link hooya-pager-link" onClick={() => setPage(tokenItem)} disabled={loading}>{tokenItem}</button>
             ),
           )}
-          {hasNext ? (
-            <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>
-              →
-            </button>
-          ) : null}
+          {hasNext ? <button className="action-link hooya-pager-link" disabled={loading} onClick={() => setPage((p) => p + 1)}>→</button> : null}
         </div>
       </section>
+
       {status ? <p className="muted">{status}</p> : null}
     </div>
   );

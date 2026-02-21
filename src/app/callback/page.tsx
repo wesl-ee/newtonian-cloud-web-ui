@@ -20,7 +20,11 @@ function CallbackInner() {
     void (async () => {
       try {
         const reply = await api.ssoCallback(code);
-        auth.set({ token: reply.token, userId: reply.user_id });
+        auth.set({
+          token: reply.token,
+          refreshToken: reply.refresh_token,
+          userId: reply.user_id,
+        });
         router.push("/files");
         router.refresh();
       } catch (err) {

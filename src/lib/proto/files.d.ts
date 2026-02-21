@@ -984,6 +984,9 @@ export namespace storage {
 
             /** FileMetadataReply height */
             height?: (number|Long|null);
+
+            /** FileMetadataReply processingStatus */
+            processingStatus?: (string|null);
         }
 
         /** Represents a FileMetadataReply. */
@@ -1012,6 +1015,9 @@ export namespace storage {
 
             /** FileMetadataReply height. */
             public height: (number|Long);
+
+            /** FileMetadataReply processingStatus. */
+            public processingStatus: string;
 
             /**
              * Creates a new FileMetadataReply instance using the specified properties.
@@ -1182,6 +1188,242 @@ export namespace storage {
 
             /**
              * Gets the default type url for FileDataReply
+             * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns The default type url
+             */
+            public static getTypeUrl(typeUrlPrefix?: string): string;
+        }
+
+        /** Properties of a ThumbnailItem. */
+        interface IThumbnailItem {
+
+            /** ThumbnailItem thumbnailCid */
+            thumbnailCid?: (string|null);
+
+            /** ThumbnailItem longEdge */
+            longEdge?: (number|null);
+
+            /** ThumbnailItem mimeType */
+            mimeType?: (string|null);
+
+            /** ThumbnailItem sizeBytes */
+            sizeBytes?: (number|Long|null);
+
+            /** ThumbnailItem width */
+            width?: (number|null);
+
+            /** ThumbnailItem height */
+            height?: (number|null);
+        }
+
+        /** Represents a ThumbnailItem. */
+        class ThumbnailItem implements IThumbnailItem {
+
+            /**
+             * Constructs a new ThumbnailItem.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: storage.files.IThumbnailItem);
+
+            /** ThumbnailItem thumbnailCid. */
+            public thumbnailCid: string;
+
+            /** ThumbnailItem longEdge. */
+            public longEdge: number;
+
+            /** ThumbnailItem mimeType. */
+            public mimeType: string;
+
+            /** ThumbnailItem sizeBytes. */
+            public sizeBytes: (number|Long);
+
+            /** ThumbnailItem width. */
+            public width: number;
+
+            /** ThumbnailItem height. */
+            public height: number;
+
+            /**
+             * Creates a new ThumbnailItem instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ThumbnailItem instance
+             */
+            public static create(properties?: storage.files.IThumbnailItem): storage.files.ThumbnailItem;
+
+            /**
+             * Encodes the specified ThumbnailItem message. Does not implicitly {@link storage.files.ThumbnailItem.verify|verify} messages.
+             * @param message ThumbnailItem message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encode(message: storage.files.IThumbnailItem, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ThumbnailItem message, length delimited. Does not implicitly {@link storage.files.ThumbnailItem.verify|verify} messages.
+             * @param message ThumbnailItem message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encodeDelimited(message: storage.files.IThumbnailItem, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ThumbnailItem message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns ThumbnailItem
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): storage.files.ThumbnailItem;
+
+            /**
+             * Decodes a ThumbnailItem message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns ThumbnailItem
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): storage.files.ThumbnailItem;
+
+            /**
+             * Verifies a ThumbnailItem message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            public static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ThumbnailItem message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ThumbnailItem
+             */
+            public static fromObject(object: { [k: string]: any }): storage.files.ThumbnailItem;
+
+            /**
+             * Creates a plain object from a ThumbnailItem message. Also converts values to other types if specified.
+             * @param message ThumbnailItem
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            public static toObject(message: storage.files.ThumbnailItem, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ThumbnailItem to JSON.
+             * @returns JSON object
+             */
+            public toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the default type url for ThumbnailItem
+             * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns The default type url
+             */
+            public static getTypeUrl(typeUrlPrefix?: string): string;
+        }
+
+        /** Properties of a ThumbnailsReply. */
+        interface IThumbnailsReply {
+
+            /** ThumbnailsReply fileCid */
+            fileCid?: (string|null);
+
+            /** ThumbnailsReply thumbnails */
+            thumbnails?: (storage.files.IThumbnailItem[]|null);
+
+            /** ThumbnailsReply processingStatus */
+            processingStatus?: (string|null);
+        }
+
+        /** Represents a ThumbnailsReply. */
+        class ThumbnailsReply implements IThumbnailsReply {
+
+            /**
+             * Constructs a new ThumbnailsReply.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: storage.files.IThumbnailsReply);
+
+            /** ThumbnailsReply fileCid. */
+            public fileCid: string;
+
+            /** ThumbnailsReply thumbnails. */
+            public thumbnails: storage.files.IThumbnailItem[];
+
+            /** ThumbnailsReply processingStatus. */
+            public processingStatus: string;
+
+            /**
+             * Creates a new ThumbnailsReply instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns ThumbnailsReply instance
+             */
+            public static create(properties?: storage.files.IThumbnailsReply): storage.files.ThumbnailsReply;
+
+            /**
+             * Encodes the specified ThumbnailsReply message. Does not implicitly {@link storage.files.ThumbnailsReply.verify|verify} messages.
+             * @param message ThumbnailsReply message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encode(message: storage.files.IThumbnailsReply, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified ThumbnailsReply message, length delimited. Does not implicitly {@link storage.files.ThumbnailsReply.verify|verify} messages.
+             * @param message ThumbnailsReply message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encodeDelimited(message: storage.files.IThumbnailsReply, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a ThumbnailsReply message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns ThumbnailsReply
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): storage.files.ThumbnailsReply;
+
+            /**
+             * Decodes a ThumbnailsReply message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns ThumbnailsReply
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): storage.files.ThumbnailsReply;
+
+            /**
+             * Verifies a ThumbnailsReply message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            public static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a ThumbnailsReply message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns ThumbnailsReply
+             */
+            public static fromObject(object: { [k: string]: any }): storage.files.ThumbnailsReply;
+
+            /**
+             * Creates a plain object from a ThumbnailsReply message. Also converts values to other types if specified.
+             * @param message ThumbnailsReply
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            public static toObject(message: storage.files.ThumbnailsReply, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this ThumbnailsReply to JSON.
+             * @returns JSON object
+             */
+            public toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the default type url for ThumbnailsReply
              * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
              * @returns The default type url
              */
@@ -1800,6 +2042,103 @@ export namespace storage {
             public static getTypeUrl(typeUrlPrefix?: string): string;
         }
 
+        /** Properties of a RefreshRequest. */
+        interface IRefreshRequest {
+
+            /** RefreshRequest refreshToken */
+            refreshToken?: (string|null);
+        }
+
+        /** Represents a RefreshRequest. */
+        class RefreshRequest implements IRefreshRequest {
+
+            /**
+             * Constructs a new RefreshRequest.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: storage.files.IRefreshRequest);
+
+            /** RefreshRequest refreshToken. */
+            public refreshToken: string;
+
+            /**
+             * Creates a new RefreshRequest instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns RefreshRequest instance
+             */
+            public static create(properties?: storage.files.IRefreshRequest): storage.files.RefreshRequest;
+
+            /**
+             * Encodes the specified RefreshRequest message. Does not implicitly {@link storage.files.RefreshRequest.verify|verify} messages.
+             * @param message RefreshRequest message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encode(message: storage.files.IRefreshRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified RefreshRequest message, length delimited. Does not implicitly {@link storage.files.RefreshRequest.verify|verify} messages.
+             * @param message RefreshRequest message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encodeDelimited(message: storage.files.IRefreshRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a RefreshRequest message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns RefreshRequest
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): storage.files.RefreshRequest;
+
+            /**
+             * Decodes a RefreshRequest message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns RefreshRequest
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): storage.files.RefreshRequest;
+
+            /**
+             * Verifies a RefreshRequest message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            public static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a RefreshRequest message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns RefreshRequest
+             */
+            public static fromObject(object: { [k: string]: any }): storage.files.RefreshRequest;
+
+            /**
+             * Creates a plain object from a RefreshRequest message. Also converts values to other types if specified.
+             * @param message RefreshRequest
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            public static toObject(message: storage.files.RefreshRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this RefreshRequest to JSON.
+             * @returns JSON object
+             */
+            public toJSON(): { [k: string]: any };
+
+            /**
+             * Gets the default type url for RefreshRequest
+             * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns The default type url
+             */
+            public static getTypeUrl(typeUrlPrefix?: string): string;
+        }
+
         /** Properties of an AuthReply. */
         interface IAuthReply {
 
@@ -1808,6 +2147,9 @@ export namespace storage {
 
             /** AuthReply userId */
             userId?: (string|null);
+
+            /** AuthReply refreshToken */
+            refreshToken?: (string|null);
         }
 
         /** Represents an AuthReply. */
@@ -1824,6 +2166,9 @@ export namespace storage {
 
             /** AuthReply userId. */
             public userId: string;
+
+            /** AuthReply refreshToken. */
+            public refreshToken: string;
 
             /**
              * Creates a new AuthReply instance using the specified properties.

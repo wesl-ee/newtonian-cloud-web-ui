@@ -14,6 +14,7 @@ type FileMeta = {
   mime_type: string;
   size_bytes: number;
   status: string;
+  processing_status: string;
   height: number;
 };
 
@@ -25,6 +26,14 @@ type FileProof = {
   attested: boolean;
 };
 
+function thumbSrc(cid: string): string {
+  return `/api/thumb/${encodeURIComponent(cid)}`;
+}
+
+function fileSrc(cid: string): string {
+  return `/api/file/${encodeURIComponent(cid)}`;
+}
+
 export default function FileDetailPage() {
   const auth = useAuth();
   const router = useRouter();
@@ -33,16 +42,26 @@ export default function FileDetailPage() {
   const [file, setFile] = useState<FileMeta | null>(null);
   const [proof, setProof] = useState<FileProof | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [previewMime, setPreviewMime] = useState("");
+  const [previewWidth, setPreviewWidth] = useState(1);
+  const [previewHeight, setPreviewHeight] = useState(1);
+  const [processingStatus, setProcessingStatus] = useState("");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
     if (!auth.ready || !auth.session || !cid) return;
+    let active = true;
     void Promise.all([api.fileGet(auth.session.token, cid), api.fileProof(auth.session.token, cid)])
       .then(([f, p]) => {
+        if (!active) return;
         setFile(f);
         setProof(p);
+        setProcessingStatus(f.processing_status || "");
       })
       .catch((e: unknown) => setStatus(e instanceof Error ? e.message : "load failed"));
+    return () => {
+      active = false;
+    };
   }, [auth.ready, auth.session, cid]);
 
   useEffect(() => {
@@ -50,50 +69,57 @@ export default function FileDetailPage() {
   }, [auth.ready, auth.session, router]);
 
   useEffect(() => {
-    if (!auth.session || !file) {
-      setPreviewUrl("");
-      return;
-    }
+    if (!auth.session || !file) return;
     let active = true;
-    let url = "";
-    void api
-      // temporary: assume files are images and render from cid data; swap to /thumb/{cid}/{small,medium,large} once endpoint ships.
-      .fileData(auth.session.token, file.file_cid)
-      .then((data) => {
+    const token = auth.session.token;
+
+    const refresh = async () => {
+      try {
+        const thumbsReply = await api.fileThumbnails(token, file.file_cid);
         if (!active) return;
-        const blob = new Blob([data.data], { type: file.mime_type || "application/octet-stream" });
-        url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
-      })
-      .catch(() => setPreviewUrl(""));
+        const statusNow = thumbsReply.processing_status || file.processing_status || "";
+        setProcessingStatus(statusNow);
+        const thumbs = [...thumbsReply.thumbnails].sort((a, b) => a.long_edge - b.long_edge);
+        const largest = thumbs[thumbs.length - 1];
+        if (!largest) {
+          setPreviewUrl("");
+          setPreviewMime("");
+          setPreviewWidth(1);
+          setPreviewHeight(1);
+          return;
+        }
+        if (!active) return;
+        setPreviewMime(largest.mime_type || "application/octet-stream");
+        setPreviewWidth(largest.width || largest.long_edge || 1);
+        setPreviewHeight(largest.height || largest.long_edge || 1);
+        setPreviewUrl(thumbSrc(largest.thumbnail_cid));
+      } catch {
+        if (!active) return;
+        setPreviewUrl("");
+        setPreviewMime("");
+        setPreviewWidth(1);
+        setPreviewHeight(1);
+      }
+    };
+
+    void refresh();
+    if (processingStatus === "processing") {
+      const tick = window.setInterval(() => void refresh(), 3000);
+      return () => {
+        active = false;
+        window.clearInterval(tick);
+      };
+    }
+
     return () => {
       active = false;
-      if (url) URL.revokeObjectURL(url);
     };
-  }, [auth.session, file]);
+  }, [auth.session, file, processingStatus]);
 
   const orientation = useMemo(() => {
     if (!file?.height) return "landscape";
     return file.height > 1200 ? "portrait" : "landscape";
   }, [file?.height]);
-
-  async function download() {
-    if (!auth.session || !file) return;
-    try {
-      const data = await api.fileData(auth.session.token, file.file_cid);
-      const blob = new Blob([data.data], { type: file.mime_type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = file.filename || "download.bin";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "download failed");
-    }
-  }
 
   async function deleteFile() {
     if (!auth.session || !file) return;
@@ -107,8 +133,7 @@ export default function FileDetailPage() {
     }
   }
 
-  if (!auth.ready) return <p>loading...</p>;
-  if (!auth.session) return <p>loading...</p>;
+  if (!auth.ready || !auth.session) return <p>loading...</p>;
   if (!file) {
     return (
       <div className="stack">
@@ -122,9 +147,9 @@ export default function FileDetailPage() {
     <div className="stack">
       <ul className="slash-flat-list">
         <li>
-          <button className="action-link" onClick={() => void download()}>
+          <a className="action-link" href={fileSrc(file.file_cid)} target="_blank" rel="noreferrer">
             Download File ({formatBytes(file.size_bytes)})
-          </button>
+          </a>
         </li>
         <li>{file.mime_type}</li>
       </ul>
@@ -134,9 +159,13 @@ export default function FileDetailPage() {
           <h3>Preview</h3>
           {previewUrl ? (
             <div className="file-preview-container">
-              <a href={previewUrl} target="_blank" rel="noreferrer" className="file-preview-link">
-                <img className="detail-thumb" src={previewUrl} alt={file.filename || file.file_cid} />
-              </a>
+              {file.mime_type.startsWith("video/") && previewMime.startsWith("video/") ? (
+                <video className="detail-thumb" src={previewUrl} width={previewWidth} height={previewHeight} muted loop autoPlay playsInline controls />
+              ) : (
+                <a href={fileSrc(file.file_cid)} target="_blank" rel="noreferrer" className="file-preview-link">
+                  <img className="detail-thumb" src={previewUrl} width={previewWidth} height={previewHeight} alt={file.filename || file.file_cid} />
+                </a>
+              )}
             </div>
           ) : (
             <div className="detail-thumb detail-thumb-empty" />
@@ -155,6 +184,8 @@ export default function FileDetailPage() {
               <dd className="detail-value">{file.mime_type}</dd>
               <dt className="detail-label">Status</dt>
               <dd className="detail-value">{file.status}</dd>
+              <dt className="detail-label">Processing</dt>
+              <dd className="detail-value">{processingStatus || file.processing_status}</dd>
               <dt className="detail-label">Size</dt>
               <dd className="detail-value">{formatBytes(file.size_bytes)}</dd>
               <dt className="detail-label">Leaf Hash</dt>
